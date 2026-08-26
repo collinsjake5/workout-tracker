@@ -66,7 +66,6 @@ export default function ExerciseCard({ exercise }: { exercise: Exercise }) {
     };
 
     loadExisting();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercise.id]);
 
   const updateSet = (index: number, field: "weight" | "reps", value: string) => {

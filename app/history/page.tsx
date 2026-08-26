@@ -16,6 +16,10 @@ interface LogRow {
 export default function HistoryPage() {
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editWeight, setEditWeight] = useState("");
+  const [editReps, setEditReps] = useState("");
+  const [busyId, setBusyId] = useState<number | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -31,6 +35,50 @@ export default function HistoryPage() {
     };
     load();
   }, []);
+
+  const startEdit = (log: LogRow) => {
+    setEditingId(log.id);
+    setEditWeight(log.weight?.toString() ?? "");
+    setEditReps(log.reps?.toString() ?? "");
+  };
+
+  const cancelEdit = () => setEditingId(null);
+
+  const saveEdit = async (id: number) => {
+    setBusyId(id);
+    const { error } = await supabase
+      .from("workout_logs")
+      .update({
+        weight: editWeight === "" ? null : Number(editWeight),
+        reps: editReps === "" ? null : Number(editReps),
+      })
+      .eq("id", id);
+    setBusyId(null);
+    if (!error) {
+      setLogs((prev) =>
+        prev.map((l) =>
+          l.id === id
+            ? {
+                ...l,
+                weight: editWeight === "" ? null : Number(editWeight),
+                reps: editReps === "" ? null : Number(editReps),
+              }
+            : l
+        )
+      );
+      setEditingId(null);
+    }
+  };
+
+  const deleteLog = async (id: number) => {
+    if (!window.confirm("Delete this set?")) return;
+    setBusyId(id);
+    const { error } = await supabase.from("workout_logs").delete().eq("id", id);
+    setBusyId(null);
+    if (!error) {
+      setLogs((prev) => prev.filter((l) => l.id !== id));
+    }
+  };
 
   const grouped = logs.reduce<Record<string, LogRow[]>>((acc, log) => {
     (acc[log.logged_date] ??= []).push(log);
@@ -69,15 +117,63 @@ export default function HistoryPage() {
                 {entries.map((log) => (
                   <div
                     key={log.id}
-                    className="flex justify-between text-sm text-zinc-700 dark:text-zinc-300"
+                    className="flex items-center justify-between gap-2 py-1 text-sm text-zinc-700 dark:text-zinc-300"
                   >
-                    <span>
+                    <span className="min-w-0 flex-1 truncate">
                       {log.exercises?.name ?? "Exercise"}{" "}
                       <span className="text-zinc-400">set {log.set_number}</span>
                     </span>
-                    <span>
-                      {log.weight ?? "-"}lb x {log.reps ?? "-"}
-                    </span>
+
+                    {editingId === log.id ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          value={editWeight}
+                          onChange={(e) => setEditWeight(e.target.value)}
+                          className="w-14 rounded-md border border-zinc-300 bg-transparent px-1 py-0.5 text-sm dark:border-zinc-700"
+                        />
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={editReps}
+                          onChange={(e) => setEditReps(e.target.value)}
+                          className="w-14 rounded-md border border-zinc-300 bg-transparent px-1 py-0.5 text-sm dark:border-zinc-700"
+                        />
+                        <button
+                          onClick={() => saveEdit(log.id)}
+                          disabled={busyId === log.id}
+                          className="rounded-md bg-zinc-900 px-2 py-0.5 text-xs font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="text-xs text-zinc-400"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="whitespace-nowrap">
+                          {log.weight ?? "-"}lb x {log.reps ?? "-"}
+                        </span>
+                        <button
+                          onClick={() => startEdit(log)}
+                          className="text-xs text-zinc-400 underline"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => deleteLog(log.id)}
+                          disabled={busyId === log.id}
+                          className="text-xs text-red-500 underline"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

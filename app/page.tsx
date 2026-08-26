@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { DAYS } from "@/lib/types";
 
-export default function Home() {
-  const [todayWeekday, setTodayWeekday] = useState<number | null>(null);
+const noopSubscribe = () => () => {};
+const getTodayWeekday = () => new Date().getDay();
+const getServerWeekday = () => null;
 
-  useEffect(() => {
-    setTodayWeekday(new Date().getDay());
-  }, []);
+export default function Home() {
+  const todayWeekday = useSyncExternalStore(noopSubscribe, getTodayWeekday, getServerWeekday);
 
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 dark:bg-black min-h-screen">
@@ -44,12 +44,20 @@ export default function Home() {
           })}
         </div>
 
-        <Link
-          href="/history"
-          className="mt-6 text-center text-sm font-medium text-zinc-500 underline dark:text-zinc-400"
-        >
-          View workout history
-        </Link>
+        <div className="mt-6 flex justify-center gap-4 text-sm font-medium">
+          <Link
+            href="/history"
+            className="text-zinc-500 underline dark:text-zinc-400"
+          >
+            History
+          </Link>
+          <Link
+            href="/progress"
+            className="text-zinc-500 underline dark:text-zinc-400"
+          >
+            Progress
+          </Link>
+        </div>
       </main>
     </div>
   );
