@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Home Gym Workouts
 
-## Getting Started
+Personal dumbbell + bodyweight workout tracker. Next.js frontend, Supabase (Postgres) for storage, deployed free on Vercel.
 
-First, run the development server:
+## Setup
+
+### 1. Create the Supabase project
+
+1. At [supabase.com](https://supabase.com), create a new project (free tier).
+2. Open **SQL Editor** → **New query**, paste in the contents of `supabase/schema.sql`, and run it. This creates the `exercises` and `workout_logs` tables and seeds the 4-day plan (Push / Pull / Lower+Core / Full Upper).
+3. Go to **Project Settings → API** and copy the **Project URL** and **anon public** key.
+
+### 2. Configure environment variables locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.local.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` with the values from step 1.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Run locally
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run dev
+```
 
-## Learn More
+Open [http://localhost:3000](http://localhost:3000).
 
-To learn more about Next.js, take a look at the following resources:
+### 4. Deploy to Vercel
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Push this repo to GitHub.
+2. In Vercel, **Add New Project** → import the GitHub repo.
+3. Add the same two env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) in the Vercel project settings (Environment Variables).
+4. Deploy. Vercel gives you a permanent `https://<project>.vercel.app` URL — open it on your phone and use "Add to Home Screen" for an app-like icon.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Every push to `main` auto-redeploys.
 
-## Deploy on Vercel
+## How it's structured
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `supabase/schema.sql` — table definitions + seed data for all exercises. Edit the plan by editing rows in the `exercises` table (via Supabase's Table Editor), no code changes needed.
+- `app/page.tsx` — home screen, highlights today's day based on the schedule in `lib/types.ts`.
+- `app/day/[dayKey]/page.tsx` — one day's exercises, with per-set weight/reps logging (upserts into `workout_logs`, so re-opening today just edits today's entry).
+- `app/history/page.tsx` — past logged sessions, grouped by date.
+- No login — the anon key + open Postgres row-level-security policies are scoped for single-user personal use. Don't put anything sensitive in here.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Changing the workout plan
+
+Edit rows directly in Supabase's Table Editor (`exercises` table): change `day_key`, `order_index`, `name`, `target_sets`, `target_reps`, or `cue`. The app always reads live from the DB.
