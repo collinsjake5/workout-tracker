@@ -8,7 +8,12 @@ export interface Exercise {
   target_sets: number;
   target_reps: string;
   cue: string | null;
+  bodyweight: boolean;
+  archived: boolean;
 }
+
+/** Plank-style targets ('45-60s') are held for time, so the rep box means seconds. */
+export const isTimed = (targetReps: string) => /\d\s*s$/.test(targetReps);
 
 export interface WorkoutLog {
   id: number;

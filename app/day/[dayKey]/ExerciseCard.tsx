@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import type { Exercise } from "@/lib/types";
+import { isTimed, type Exercise } from "@/lib/types";
 
 interface SetInput {
   weight: string;
@@ -13,6 +13,7 @@ interface SetInput {
 const todayIso = () => new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local time
 
 export default function ExerciseCard({ exercise }: { exercise: Exercise }) {
+  const repLabel = isTimed(exercise.target_reps) ? "sec" : "reps";
   const [sets, setSets] = useState<SetInput[]>(
     Array.from({ length: exercise.target_sets }, () => ({
       weight: "",
@@ -61,12 +62,16 @@ export default function ExerciseCard({ exercise }: { exercise: Exercise }) {
         .maybeSingle();
 
       if (lastLog) {
-        setLastPerformance(`${lastLog.weight ?? "?"}lb x ${lastLog.reps ?? "?"}`);
+        setLastPerformance(
+          exercise.bodyweight
+            ? `${lastLog.reps ?? "?"} ${repLabel}`
+            : `${lastLog.weight ?? "?"}lb x ${lastLog.reps ?? "?"}`
+        );
       }
     };
 
     loadExisting();
-  }, [exercise.id]);
+  }, [exercise.id, exercise.bodyweight, repLabel]);
 
   const updateSet = (index: number, field: "weight" | "reps", value: string) => {
     setSets((prev) =>
@@ -119,18 +124,20 @@ export default function ExerciseCard({ exercise }: { exercise: Exercise }) {
             <span className="w-10 text-xs text-zinc-500 dark:text-zinc-400">
               Set {i + 1}
             </span>
-            <input
-              type="number"
-              inputMode="decimal"
-              placeholder="lb"
-              value={set.weight}
-              onChange={(e) => updateSet(i, "weight", e.target.value)}
-              className="w-16 rounded-md border border-zinc-300 bg-transparent px-2 py-1 text-sm text-zinc-900 dark:border-zinc-700 dark:text-zinc-50"
-            />
+            {!exercise.bodyweight && (
+              <input
+                type="number"
+                inputMode="decimal"
+                placeholder="lb"
+                value={set.weight}
+                onChange={(e) => updateSet(i, "weight", e.target.value)}
+                className="w-16 rounded-md border border-zinc-300 bg-transparent px-2 py-1 text-sm text-zinc-900 dark:border-zinc-700 dark:text-zinc-50"
+              />
+            )}
             <input
               type="number"
               inputMode="numeric"
-              placeholder="reps"
+              placeholder={repLabel}
               value={set.reps}
               onChange={(e) => updateSet(i, "reps", e.target.value)}
               className="w-16 rounded-md border border-zinc-300 bg-transparent px-2 py-1 text-sm text-zinc-900 dark:border-zinc-700 dark:text-zinc-50"

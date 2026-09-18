@@ -8,7 +8,9 @@ create table if not exists exercises (
   name text not null,
   target_sets int not null,
   target_reps text not null,       -- e.g. '8-10', '12-15 each', 'to failure'
-  cue text                          -- short form cue
+  cue text,                         -- short form cue
+  bodyweight boolean not null default false,  -- true = reps only, no weight input
+  archived boolean not null default false     -- retired from the day, logs kept
 );
 
 create table if not exists workout_logs (
@@ -61,10 +63,10 @@ insert into exercises (day_key, order_index, name, target_sets, target_reps, cue
 ('lower', 1, 'Goblet squats', 4, '10-12', 'DB at chest, sit hips back and down'),
 ('lower', 2, 'DB Romanian deadlifts', 4, '10-12', 'Hinge at hips, slight knee bend, DBs close to legs'),
 ('lower', 3, 'Bulgarian split squats (rear foot on bench)', 3, '8-10 each', 'Torso upright, front knee tracks over foot'),
-('lower', 4, 'DB step-ups onto bench', 3, '10 each', 'Drive through heel, stand fully tall'),
+('lower', 4, 'DB reverse lunges', 3, '10 each', 'Step back, drop rear knee, drive through front heel'),
 ('lower', 5, 'Standing calf raises holding DBs', 3, '15-20', 'Full stretch at bottom, pause at top'),
 ('lower', 6, 'Plank', 3, '45-60s', 'Straight line, ribs down'),
-('lower', 7, 'Dead bugs', 3, '10 each', 'Low back flat, opposite arm/leg'),
+('lower', 7, 'Scissor kicks', 3, '20-30', 'Low back flat, legs straight, small quick crosses'),
 ('lower', 8, 'Leg raises', 3, '12', 'Control the lower, avoid low-back arch'),
 
 -- Friday: Full Upper
@@ -75,3 +77,7 @@ insert into exercises (day_key, order_index, name, target_sets, target_reps, cue
 ('upper', 5, 'DB shrugs', 3, '12-15', 'Straight up, no rolling'),
 ('upper', 6, 'DB curls (superset)', 3, '10-12', 'Pair with skullcrushers, no rest between'),
 ('upper', 7, 'Skullcrushers on bench (superset)', 3, '10-12', 'Elbows fixed, lower to forehead');
+
+-- Bodyweight-only movements: no weight to enter, so the app logs reps (or seconds) only.
+update exercises set bodyweight = true
+where name in ('Push-ups to failure', 'Plank', 'Scissor kicks', 'Leg raises');

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { isTimed } from "@/lib/types";
 
 interface LogRow {
   id: number;
@@ -10,7 +11,7 @@ interface LogRow {
   set_number: number;
   weight: number | null;
   reps: number | null;
-  exercises: { name: string } | null;
+  exercises: { name: string; bodyweight: boolean; target_reps: string } | null;
 }
 
 export default function HistoryPage() {
@@ -26,7 +27,9 @@ export default function HistoryPage() {
       setLoading(true);
       const { data } = await supabase
         .from("workout_logs")
-        .select("id, logged_date, set_number, weight, reps, exercises(name)")
+        .select(
+          "id, logged_date, set_number, weight, reps, exercises(name, bodyweight, target_reps)"
+        )
         .order("logged_date", { ascending: false })
         .order("set_number", { ascending: true })
         .limit(300);
@@ -126,13 +129,15 @@ export default function HistoryPage() {
 
                     {editingId === log.id ? (
                       <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          value={editWeight}
-                          onChange={(e) => setEditWeight(e.target.value)}
-                          className="w-14 rounded-md border border-zinc-300 bg-transparent px-1 py-0.5 text-sm dark:border-zinc-700"
-                        />
+                        {!log.exercises?.bodyweight && (
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            value={editWeight}
+                            onChange={(e) => setEditWeight(e.target.value)}
+                            className="w-14 rounded-md border border-zinc-300 bg-transparent px-1 py-0.5 text-sm dark:border-zinc-700"
+                          />
+                        )}
                         <input
                           type="number"
                           inputMode="numeric"
@@ -157,7 +162,11 @@ export default function HistoryPage() {
                     ) : (
                       <div className="flex items-center gap-2">
                         <span className="whitespace-nowrap">
-                          {log.weight ?? "-"}lb x {log.reps ?? "-"}
+                          {log.exercises?.bodyweight
+                            ? `${log.reps ?? "-"}${
+                                isTimed(log.exercises.target_reps) ? "s" : " reps"
+                              }`
+                            : `${log.weight ?? "-"}lb x ${log.reps ?? "-"}`}
                         </span>
                         <button
                           onClick={() => startEdit(log)}

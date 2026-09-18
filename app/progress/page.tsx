@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { DAYS, type Exercise } from "@/lib/types";
+import { DAYS, isTimed, type Exercise } from "@/lib/types";
 import LineChart, { type ChartPoint } from "./LineChart";
 
 export default function ProgressPage() {
@@ -29,31 +29,37 @@ export default function ProgressPage() {
 
   useEffect(() => {
     if (selectedId === null) return;
+    // Bodyweight moves have no weight to track, so they chart reps (or seconds) instead.
+    const bodyweight = exercises.find((e) => e.id === selectedId)?.bodyweight ?? false;
+    const metric = bodyweight ? "reps" : "weight";
+
     const load = async () => {
       const { data } = await supabase
         .from("workout_logs")
         .select("logged_date, weight, reps, set_number")
         .eq("exercise_id", selectedId)
-        .not("weight", "is", null)
+        .not(metric, "is", null)
         .order("logged_date", { ascending: true })
         .order("set_number", { ascending: true });
 
-      const byDate = new Map<string, { weight: number; reps: number | null }>();
+      // Keep each day's best set.
+      const byDate = new Map<string, { value: number; reps: number | null }>();
       for (const row of data ?? []) {
+        const value = (bodyweight ? row.reps : row.weight) ?? 0;
         const existing = byDate.get(row.logged_date);
-        if (!existing || (row.weight ?? 0) > existing.weight) {
-          byDate.set(row.logged_date, { weight: row.weight, reps: row.reps });
+        if (!existing || value > existing.value) {
+          byDate.set(row.logged_date, { value, reps: bodyweight ? null : row.reps });
         }
       }
       const chartPoints: ChartPoint[] = Array.from(byDate.entries()).map(([date, v]) => ({
         date,
-        weight: v.weight,
+        value: v.value,
         reps: v.reps,
       }));
       setPoints(chartPoints);
     };
     load();
-  }, [selectedId]);
+  }, [selectedId, exercises]);
 
   const grouped = useMemo(() => {
     return DAYS.map((day) => ({
@@ -86,6 +92,7 @@ export default function ProgressPage() {
                   {dayExercises.map((ex) => (
                     <option key={ex.id} value={ex.id}>
                       {ex.name}
+                      {ex.archived ? " (retired)" : ""}
                     </option>
                   ))}
                 </optgroup>
@@ -101,8 +108,14 @@ export default function ProgressPage() {
             </h2>
             {points.length === 0 ? (
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                No logged weight yet for this exercise.
+                No logged sets yet for this exercise.
               </p>
+            ) : selectedExercise.bodyweight ? (
+              <LineChart
+                data={points}
+                unit={isTimed(selectedExercise.target_reps) ? "s" : " reps"}
+                label={isTimed(selectedExercise.target_reps) ? "Hold" : "Reps"}
+              />
             ) : (
               <LineChart data={points} />
             )}

@@ -22,6 +22,7 @@ export default function DayPage() {
         .from("exercises")
         .select("*")
         .eq("day_key", dayKey)
+        .eq("archived", false)
         .order("order_index", { ascending: true });
       setExercises(data ?? []);
       setLoading(false);

@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 
 export interface ChartPoint {
   date: string; // YYYY-MM-DD
-  weight: number;
-  reps: number | null;
+  value: number; // weight for loaded lifts, reps/seconds for bodyweight ones
+  reps: number | null; // secondary detail; null hides the reps column
 }
 
 function niceStep(rawStep: number): number {
@@ -27,14 +27,25 @@ const PAD_RIGHT = 14;
 const PAD_TOP = 20;
 const PAD_BOTTOM = 24;
 
-export default function LineChart({ data }: { data: ChartPoint[] }) {
+export default function LineChart({
+  data,
+  unit = "lb",
+  label = "Weight",
+}: {
+  data: ChartPoint[];
+  /** Appended verbatim after the value — e.g. "lb", "s", " reps". */
+  unit?: string;
+  /** Column header for the value in the table view. */
+  label?: string;
+}) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [showTable, setShowTable] = useState(false);
+  const showReps = data.some((d) => d.reps != null);
 
   const plot = useMemo(() => {
-    const weights = data.map((d) => d.weight);
-    const minW = Math.min(...weights);
-    const maxW = Math.max(...weights);
+    const values = data.map((d) => d.value);
+    const minW = Math.min(...values);
+    const maxW = Math.max(...values);
     const step = niceStep(Math.max((maxW - minW) / 4, 2.5));
     const yMin = Math.floor((minW - step * 0.5) / step) * step;
     const yMax = Math.ceil((maxW + step * 0.5) / step) * step;
@@ -47,7 +58,7 @@ export default function LineChart({ data }: { data: ChartPoint[] }) {
       data.length === 1 ? PAD_LEFT + innerW / 2 : PAD_LEFT + (innerW * i) / (data.length - 1);
     const yFor = (w: number) => PAD_TOP + innerH - ((w - yMin) * innerH) / yRange;
 
-    const points = data.map((d, i) => ({ ...d, x: xFor(i), y: yFor(d.weight) }));
+    const points = data.map((d, i) => ({ ...d, x: xFor(i), y: yFor(d.value) }));
 
     const yTicks: number[] = [];
     for (let v = yMin; v <= yMax + 0.001; v += step) yTicks.push(v);
@@ -167,7 +178,8 @@ export default function LineChart({ data }: { data: ChartPoint[] }) {
                   fontWeight={600}
                   fill="var(--text-primary)"
                 >
-                  {p.weight}lb
+                  {p.value}
+                  {unit}
                 </text>
               )}
             </g>
@@ -193,7 +205,10 @@ export default function LineChart({ data }: { data: ChartPoint[] }) {
           style={{ color: "var(--text-primary)", background: "var(--surface-1)" }}
         >
           <span style={{ color: "var(--text-secondary)" }}>{formatDate(active.date)}: </span>
-          <strong>{active.weight}lb</strong>
+          <strong>
+            {active.value}
+            {unit}
+          </strong>
           {active.reps != null && <span style={{ color: "var(--text-secondary)" }}> x {active.reps}</span>}
         </div>
       )}
@@ -211,16 +226,19 @@ export default function LineChart({ data }: { data: ChartPoint[] }) {
           <thead>
             <tr style={{ color: "var(--text-secondary)" }}>
               <th className="text-left">Date</th>
-              <th className="text-right">Weight</th>
-              <th className="text-right">Reps</th>
+              <th className="text-right">{label}</th>
+              {showReps && <th className="text-right">Reps</th>}
             </tr>
           </thead>
           <tbody>
             {data.map((d, i) => (
               <tr key={i}>
                 <td>{formatDate(d.date)}</td>
-                <td className="text-right">{d.weight}lb</td>
-                <td className="text-right">{d.reps ?? "-"}</td>
+                <td className="text-right">
+                  {d.value}
+                  {unit}
+                </td>
+                {showReps && <td className="text-right">{d.reps ?? "-"}</td>}
               </tr>
             ))}
           </tbody>
